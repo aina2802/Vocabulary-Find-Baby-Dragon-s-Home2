@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baby Dragon's Vocabulary Journey</title>
+    <style>
+        /* CSS - DESIGN & LAYOUT */
+        :root {
+            --primary-blue: #4da3ff;
+            --success-green: #4caf50;
+            --error-red: #f44336;
+            --dragon-purple: #9c27b0;
+            --text-main: #2c3e50;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #eef2f7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            width: 95%;
+            max-width: 500px;
+            background: white;
+            padding: 30px;
+            border-radius: 25px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            min-height: 600px;
+        }
+
+        /* Screen Visibility Logic */
+        .screen { display: none; width: 100%; flex-direction: column; align-items: center; }
+        .active { display: flex; }
+
+        /* Graphics Area */
+        .image-box {
+            width: 220px;
+            height: 220px;
+            margin: 20px 0;
+            background: #f9f9f9;
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        svg { width: 180px; height: 180px; }
+
+        /* Typography */
+        h1 { color: var(--dragon-purple); margin-bottom: 10px; }
+        p { font-size: 1.2rem; color: var(--text-main); line-height: 1.5; margin: 10px 0; }
+        .question-label { font-weight: bold; font-size: 1.4rem; color: #1a73e8; margin: 15px 0; }
+
+        /* Button Layout */
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px; /* Critical spacing */
+            width: 100%;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .btn {
+            width: 100%;
+            max-width: 300px; /* Critical requirement */
+            padding: 18px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            color: white;
+            background: var(--primary-blue);
+            box-shadow: 0 5px 0 #3b82d1;
+        }
+
+        .btn:active {
+            transform: translateY(3px);
+            box-shadow: 0 2px 0 #3b82d1;
+        }
+
+        .btn-start { background: var(--success-green); box-shadow: 0 5px 0 #388e3c; }
+
+        /* Feedback Styles */
+        #feedback {
+            font-size: 1.2rem;
+            font-weight: bold;
+            height: 30px;
+            margin-top: 15px;
+        }
+
+        .correct-text { color: var(--success-green); }
+        .wrong-text { color: var(--error-red); }
+
+        /* Simple Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            75% { transform: translateX(8px); }
+        }
+        .shake { animation: shake 0.4s; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        
+        <!-- START SCREEN -->
+        <div id="start-screen" class="screen active">
+            <h1>🐉 Baby Dragon</h1>
+            <div class="image-box">
+                <!-- Cartoon Dragon SVG -->
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#9c27b0"/>
+                    <circle cx="35" cy="40" r="5" fill="white"/>
+                    <circle cx="65" cy="40" r="5" fill="white"/>
+                    <path d="M40 70 Q50 80 60 70" stroke="white" stroke-width="3" fill="none"/>
+                    <path d="M30 20 L40 35 M70 20 L60 35" stroke="#ba68c8" stroke-width="5"/>
+                </svg>
+            </div>
+            <p>Help the baby dragon find its family by naming the things you see!</p>
+            <div class="button-group">
+                <button class="btn btn-start" onclick="startGame()">Start Adventure</button>
+            </div>
+        </div>
+
+        <!-- GAMEPLAY SCREEN -->
+        <div id="game-screen" class="screen">
+            <p id="story-para">The dragon looks around...</p>
+            <div class="image-box" id="image-display"></div>
+            <p class="question-label">This is a <span id="blank">____</span>.</p>
+            
+            <div id="feedback"></div>
+
+            <div class="button-group">
+                <button id="opt1" class="btn" onclick="handleChoice(this.innerText)"></button>
+                <button id="opt2" class="btn" onclick="handleChoice(this.innerText)"></button>
+            </div>
+        </div>
+
+        <!-- FINAL SCREEN -->
+        <div id="final-screen" class="screen">
+            <h1>🎉 Hooray!</h1>
+            <div class="image-box">
+                <svg viewBox="0 0 100 100">
+                    <path d="M20 80 L50 20 L80 80 Z" fill="#ffd700"/>
+                    <circle cx="50" cy="45" r="10" fill="#fff"/>
+                </svg>
+            </div>
+            <p>The baby dragon found its home! You are a vocabulary master!</p>
+            <div class="button-group">
+                <button class="btn btn-start" onclick="resetGame()">Play Again</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /* JAVASCRIPT - GAME LOGIC */
+
+        // 1. Game State
+        let currentLevel = 0;
+
+        // 2. SVG Cartoon Library
+        const library = {
+            rabbit: `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="25" ry="20" fill="#ddd"/><ellipse cx="40" cy="30" rx="6" ry="15" fill="#ddd"/><ellipse cx="60" cy="30" rx="6" ry="15" fill="#ddd"/><circle cx="42" cy="55" r="3" fill="black"/><circle cx="58" cy="55" r="3" fill="black"/></svg>`,
+            apple: `<svg viewBox="0 0 100 100"><circle cx="50" cy="55" r="30" fill="#f44336"/><path d="M50 25 V15" stroke="#5d4037" stroke-width="4"/><path d="M50 20 Q65 10 60 25" fill="#4caf50"/></svg>`,
+            owl: `<svg viewBox="0 0 100 100"><circle cx="50" cy="55" r="30" fill="#795548"/><circle cx="40" cy="45" r="8" fill="white"/><circle cx="60" cy="45" r="8" fill="white"/><path d="M47 55 L53 55 L50 62 Z" fill="orange"/></svg>`,
+            frog: `<svg viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="35" ry="25" fill="#8bc34a"/><circle cx="35" cy="40" r="8" fill="#8bc34a"/><circle cx="65" cy="40" r="8" fill="#8bc34a"/><circle cx="35" cy="40" r="3" fill="black"/><circle cx="65" cy="40" r="3" fill="black"/></svg>`,
+            key: `<svg viewBox="0 0 100 100"><circle cx="30" cy="50" r="15" fill="none" stroke="#ffeb3b" stroke-width="8"/><rect x="45" y="46" width="35" height="8" fill="#ffeb3b"/><rect x="65" y="54" width="6" height="10" fill="#ffeb3b"/></svg>`,
+            sun: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="25" fill="#ffeb3b"/><path d="M50 10 V20 M50 80 V90 M10 50 H20 M80 50 H90" stroke="#fbc02d" stroke-width="4"/></svg>`,
+            mushroom: `<svg viewBox="0 0 100 100"><rect x="42" y="60" width="16" height="30" fill="#eee"/><path d="M20 60 Q50 10 80 60" fill="#f44336"/><circle cx="40" cy="35" r="3" fill="white"/><circle cx="60" cy="45" r="3" fill="white"/></svg>`,
+            car: `<svg viewBox="0 0 100 100"><rect x="20" y="50" width="60" height="25" fill="#2196f3"/><rect x="30" y="35" width="40" height="20" fill="#bbdefb"/><circle cx="35" cy="75" r="8" fill="#333"/><circle cx="65" cy="75" r="8" fill="#333"/></svg>`,
+            flower: `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="12" fill="#ffeb3b"/><circle cx="50" cy="25" r="12" fill="#e91e63"/><circle cx="50" cy="75" r="12" fill="#e91e63"/><circle cx="25" cy="50" r="12" fill="#e91e63"/><circle cx="75" cy="50" r="12" fill="#e91e63"/></svg>`,
+            tree: `<svg viewBox="0 0 100 100"><rect x="44" y="60" width="12" height="30" fill="#5d4037"/><circle cx="50" cy="40" r="30" fill="#4caf50"/></svg>`
+        };
+
+        // 3. Level Content
+        const levels = [
+            { img: library.rabbit, answer: "Rabbit", decoy: "Dog", story: "The dragon meets a soft friend." },
+            { img: library.apple, answer: "Apple", decoy: "Cake", story: "The dragon is hungry for a snack." },
+            { img: library.owl, answer: "Owl", decoy: "Fish", story: "Someone is watching from the tree." },
+            { img: library.frog, answer: "Frog", decoy: "Bird", story: "Something jumps into the water." },
+            { img: library.key, answer: "Key", decoy: "Spoon", story: "The dragon finds something shiny." },
+            { img: library.sun, answer: "Sun", decoy: "Moon", story: "It is very bright outside!" },
+            { img: library.mushroom, answer: "Mushroom", decoy: "Rock", story: "Something grows on the ground." },
+            { img: library.car, answer: "Car", decoy: "Boat", story: "Beep beep! Something is driving." },
+            { img: library.flower, answer: "Flower", decoy: "Grass", story: "It smells very nice here." },
+            { img: library.tree, answer: "Tree", decoy: "House", story: "The dragon finds a big green plant." }
+        ];
+
+        // 4. Game Functions
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function startGame() {
+            currentLevel = 0;
+            showScreen('game-screen');
+            loadLevel();
+        }
+
+        function loadLevel() {
+            const data = levels[currentLevel];
+            document.getElementById('image-display').innerHTML = data.img;
+            document.getElementById('story-para').innerText = data.story;
+            document.getElementById('blank').innerText = "____";
+            document.getElementById('feedback').innerText = "";
+            
+            // Randomize button order
+            if (Math.random() > 0.5) {
+                document.getElementById('opt1').innerText = data.answer;
+                document.getElementById('opt2').innerText = data.decoy;
+            } else {
+                document.getElementById('opt1').innerText = data.decoy;
+                document.getElementById('opt2').innerText = data.answer;
+            }
+        }
+
+        function handleChoice(choice) {
+            const feedbackDiv = document.getElementById('feedback');
+            const gameScreen = document.getElementById('game-screen');
+            const data = levels[currentLevel];
+
+            if (choice === data.answer) {
+                feedbackDiv.innerHTML = `<span class="correct-text">Great job! 👏👏👏👏👏👏👏👏</span>`;
+                document.getElementById('blank').innerText = data.answer;
+                
+                // Wait 1.5 seconds then next level
+                setTimeout(() => {
+                    currentLevel++;
+                    if (currentLevel < levels.length) {
+                        loadLevel();
+                    } else {
+                        showScreen('final-screen');
+                    }
+                }, 1500);
+            } else {
+                feedbackDiv.innerHTML = `<span class="wrong-text">Try again!</span>`;
+                gameScreen.classList.add('shake');
+                setTimeout(() => gameScreen.classList.remove('shake'), 400);
+            }
+        }
+
+        function resetGame() {
+            currentLevel = 0;
+            showScreen('start-screen');
+        }
+    </script>
+</body>
+</html>
